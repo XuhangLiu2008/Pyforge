@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 
 from scipy.optimize import curve_fit
@@ -13,13 +12,13 @@ class Filament:
 
         self.colour = np.zeros(3, dtype = np.uint8)
 
-        self.refrative_index = np.zeros(3)
-        self.extinction_coefficient = np.zeros(3)
+        # Store fitted reflectance-like ratio per RGB channel (naming kept for compatibility)
+        self.refractive_index = np.zeros(3, dtype=float)
+        self.extinction_coefficient = np.zeros(3, dtype=float)
 
     def calculateCoefficients(self, samples, shown = False):
         # samples is a list of [thickness, colour]
         # colour should be np.uint8 array with size 3
-        
         def penetrateRate(thickness, refractive_ratio, extinction_coefficient, enlarge_factor):
             penetrateRateInside = np.exp(-1 * extinction_coefficient * thickness)
             return enlarge_factor * (1 - refractive_ratio) ** 2 * penetrateRateInside / (1 - refractive_ratio ** 2 * penetrateRateInside ** 2)
@@ -36,47 +35,53 @@ class Filament:
             g_list.append(sample[1][1] / 255.0)
             b_list.append(sample[1][2] / 255.0)
 
-        reasonable_guess = [0.1, 1.5, 0.5]
+        reasonable_guess = [0.1, 1.5, 1.0]
+        bounds = ([0.0, 0.0, 0.0], [0.9999, np.inf, 2.0])  # constrain params to physically meaningful ranges
 
-        MAXFEV = int(1e5)
+        MAXFEV = int(5e5)
 
-        r_coefficient, r_covariance = curve_fit(penetrateRate, thickness_list, r_list, p0 = reasonable_guess, maxfev = MAXFEV)
-        g_coefficient, g_covariance = curve_fit(penetrateRate, thickness_list, g_list, p0 = reasonable_guess, maxfev = MAXFEV)
-        b_coefficient, b_covariance = curve_fit(penetrateRate, thickness_list, b_list, p0 = reasonable_guess, maxfev = MAXFEV)
+        thickness_arr = np.asarray(thickness_list, dtype=float)
+        r_arr = np.asarray(r_list, dtype=float)
+        g_arr = np.asarray(g_list, dtype=float)
+        b_arr = np.asarray(b_list, dtype=float)
+
+        r_coefficient, r_covariance = curve_fit(penetrateRate, thickness_arr, r_arr, p0=reasonable_guess, bounds=bounds, maxfev=MAXFEV)
+        g_coefficient, g_covariance = curve_fit(penetrateRate, thickness_arr, g_arr, p0=reasonable_guess, bounds=bounds, maxfev=MAXFEV)
+        b_coefficient, b_covariance = curve_fit(penetrateRate, thickness_arr, b_arr, p0=reasonable_guess, bounds=bounds, maxfev=MAXFEV)
 
         self.refractive_index = np.array([r_coefficient[0], g_coefficient[0], b_coefficient[0]])
         self.extinction_coefficient = np.array([r_coefficient[1], g_coefficient[1], b_coefficient[1]])
 
-        print(r_coefficient)
-        print(g_coefficient)
-        print(b_coefficient)
+        print("R coef:", r_coefficient)
+        print("G coef:", g_coefficient)
+        print("B coef:", b_coefficient)
 
         if shown :
-            d_sample = np.array(thickness_list)
-            r_sample = np.array(r_list)
-            g_sample = np.array(g_list)
-            b_sample = np.array(b_list)
+            d_sample = thickness_arr
+            r_sample = r_arr
+            g_sample = g_arr
+            b_sample = b_arr
 
             d_data = np.linspace(0, np.max(d_sample) * 1.1, 1000)
             r_data = penetrateRate(d_data, r_coefficient[0], r_coefficient[1], r_coefficient[2])
-            g_data = penetrateRate(d_data, g_coefficient[0], g_coefficient[1], r_coefficient[2])
-            b_data = penetrateRate(d_data, b_coefficient[0], b_coefficient[1], r_coefficient[2])
+            g_data = penetrateRate(d_data, g_coefficient[0], g_coefficient[1], g_coefficient[2])
+            b_data = penetrateRate(d_data, b_coefficient[0], b_coefficient[1], b_coefficient[2])
 
-            plt.scatter(d_sample, r_sample, c = 'r')
-            plt.scatter(d_sample, g_sample, c = 'g')
-            plt.scatter(d_sample, b_sample, c = 'b')
-            plt.plot(d_data, r_data, 'r-')
-            plt.plot(d_data, g_data, 'g-')
-            plt.plot(d_data, b_data, 'b-')
+            plt.scatter(d_sample, r_sample, c = 'r', label='R samples')
+            plt.scatter(d_sample, g_sample, c = 'g', label='G samples')
+            plt.scatter(d_sample, b_sample, c = 'b', label='B samples')
+            plt.plot(d_data, r_data, 'r-', label='R fit')
+            plt.plot(d_data, g_data, 'g-', label='G fit')
+            plt.plot(d_data, b_data, 'b-', label='B fit')
 
             plt.xlabel('Thickness (mm)')
             plt.ylabel('Penetrate Rate')
+            plt.legend()
 
             plt.show()
 
         return 
 
 if __name__ == '__main__':
-
     test_filament = Filament()
     test_filament.calculateCoefficients([[0.1, [231, 210, 160]], [0.2, [227, 188, 81]], [0.3, [212, 156, 40]], [0.4, [200, 124, 25]], [0.5, [205, 118, 24]], [0.6, [204, 107, 21]], [0.7, [198, 92, 15]], [0.8, [192, 79, 9]], [0.9, [192, 70, 7]], [1.0, [189, 64, 6]], [1.1, [182, 56, 5]], [1.2, [170, 44, 2]], [1.3, [161, 37, 2]], [1.4, [158, 33, 1]], [1.5, [154, 29, 1]], [1.6, [149, 24, 1]]], True)
