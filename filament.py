@@ -16,7 +16,16 @@ class Filament:
         self.refractive_index = np.zeros(3, dtype=float)
         self.extinction_coefficient = np.zeros(3, dtype=float)
 
-    def calculateCoefficients(self, samples, shown = False):
+    @staticmethod
+    def inverseGamma(x, gamma = 2.2):
+        x /= 255
+        return x / 12.92 if x <= 0.04045 else ((x + 0.055) / 1.055) ** gamma
+    
+    R_temp2coff = {4000 : 1.8}
+    G_temp2coff = {4000 : 1.0}
+    B_temp2coff = {4000 : 1.4}
+
+    def calculateCoefficients(self, samples, shown = False, color_temp = 4000):
         # samples is a list of [thickness, colour]
         # colour should be np.uint8 array with size 3
         def penetrateRate(thickness, refractive_ratio, extinction_coefficient, enlarge_factor):
@@ -31,9 +40,9 @@ class Filament:
 
         for sample in samples:
             thickness_list.append(sample[0])
-            r_list.append(sample[1][0] / 255.0)
-            g_list.append(sample[1][1] / 255.0)
-            b_list.append(sample[1][2] / 255.0)
+            r_list.append(Filament.inverseGamma(sample[1][0]) / Filament.R_temp2coff[color_temp])
+            g_list.append(Filament.inverseGamma(sample[1][1]) / Filament.G_temp2coff[color_temp])
+            b_list.append(Filament.inverseGamma(sample[1][2]) / Filament.B_temp2coff[color_temp])
 
         reasonable_guess = [0.1, 1.5, 1.0]
         bounds = ([0.0, 0.0, 0.0], [0.9999, np.inf, 2.0])  # constrain params to physically meaningful ranges
@@ -84,4 +93,4 @@ class Filament:
 
 if __name__ == '__main__':
     test_filament = Filament()
-    test_filament.calculateCoefficients([[0.1, [231, 210, 160]], [0.2, [227, 188, 81]], [0.3, [212, 156, 40]], [0.4, [200, 124, 25]], [0.5, [205, 118, 24]], [0.6, [204, 107, 21]], [0.7, [198, 92, 15]], [0.8, [192, 79, 9]], [0.9, [192, 70, 7]], [1.0, [189, 64, 6]], [1.1, [182, 56, 5]], [1.2, [170, 44, 2]], [1.3, [161, 37, 2]], [1.4, [158, 33, 1]], [1.5, [154, 29, 1]], [1.6, [149, 24, 1]]], True)
+    test_filament.calculateCoefficients([[0.1, [233, 222, 214]], [0.2, [234, 210, 160]], [0.3, [227, 187, 111]], [0.4, [221, 167, 81]], [0.5, [215, 147, 69]], [0.6, [208, 136, 60]], [0.7, [203, 122, 53]], [0.8, [203, 113, 50]], [0.9, [199, 103, 45]], [1.0, [193, 94, 42]], [1.1, [188, 88, 39]], [1.2, [186, 80, 38]], [1.3, [181, 75, 36]], [1.4, [177, 72, 35]], [1.5, [173, 67, 34]], [1.6, [166, 62, 32]]], True)
