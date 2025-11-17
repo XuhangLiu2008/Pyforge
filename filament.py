@@ -5,10 +5,10 @@ import matplotlib.pyplot as plt
 
 class Filament:
 
-    def __init__(self):
+    def __init__(self, brand, name):
         
-        self.brand = ''
-        self.name = ''
+        self.brand = brand
+        self.name = name
 
         self.colour = np.zeros(3, dtype = np.uint8)
 
@@ -31,7 +31,7 @@ class Filament:
                          Filament.inverseGamma(color[1]) / Filament.G_temp2coff[color_temp], 
                          Filament.inverseGamma(color[2]) / Filament.B_temp2coff[color_temp]])
 
-    def calculateCoefficients(self, samples, shown = False, color_temp = 4000):
+    def calculateCoefficients(self, samples, shown = False, color_temp = 4000, gamma = 2.2):
         # samples is a list of [thickness, colour]
         # colour should be np.uint8 array with size 3
 
@@ -57,7 +57,7 @@ class Filament:
 
         for sample in samples:
             thickness_list.append(sample[0])
-            intensity = Filament.RGB2RelativeIntensity(sample[1])
+            intensity = Filament.RGB2RelativeIntensity(sample[1], gamma=gamma, color_temp=color_temp)
             r_list.append(intensity[0])
             g_list.append(intensity[1])
             b_list.append(intensity[2])
@@ -76,8 +76,11 @@ class Filament:
         r_coefficient = np.array([coefficient[0], coefficient[1], coefficient[6]])
         g_coefficient = np.array([coefficient[2], coefficient[3], coefficient[6]])
         b_coefficient = np.array([coefficient[4], coefficient[5], coefficient[6]])
-
-        self.refractive_index = np.array([r_coefficient[0], g_coefficient[0], b_coefficient[0]])
+        
+        # the coefficient here is the refractive ratio instead of refractive index
+        # R = ((n-1) / (n+1)) ^2
+        # n = 2 / (1 - sqrt(R) ) - 1
+        self.refractive_index = 2 / (1 - np.sqrt(np.array([r_coefficient[0], g_coefficient[0], b_coefficient[0]]))) - 1
         self.extinction_coefficient = np.array([r_coefficient[1], g_coefficient[1], b_coefficient[1]])
 
         print("R coef:", r_coefficient)
@@ -111,5 +114,5 @@ class Filament:
         return 
 
 if __name__ == '__main__':
-    test_filament = Filament()
+    test_filament = Filament("test", "test")
     test_filament.calculateCoefficients([[0.1, [231, 219, 212]], [0.2, [228, 203, 153]], [0.3, [220, 180, 104]], [0.4, [219, 165, 79]], [0.5, [213, 144, 66]], [0.6, [205, 132, 57]], [0.7, [201, 119, 51]], [0.8, [201, 111, 48]], [0.9, [197, 102, 44]], [1.0, [192, 92, 40]], [1.1, [186, 86, 37]], [1.2, [184, 78, 36]], [1.3, [179, 73, 34]], [1.4, [175, 69, 33]], [1.5, [171, 65, 32]], [1.6, [164, 59, 29]]], True)
