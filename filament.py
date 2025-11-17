@@ -5,16 +5,17 @@ import matplotlib.pyplot as plt
 
 class Filament:
 
-    def __init__(self, brand, name):
+    def __init__(self, brand, name, 
+                 refractive_index = np.zeros(3, dtype=float), 
+                 extinction_coefficient = np.zeros(3, dtype=float)):
         
         self.brand = brand
         self.name = name
 
         self.colour = np.zeros(3, dtype = np.uint8)
 
-        # Store fitted reflectance-like ratio per RGB channel (naming kept for compatibility)
-        self.refractive_index = np.zeros(3, dtype=float)
-        self.extinction_coefficient = np.zeros(3, dtype=float)
+        self.refractive_index = refractive_index
+        self.extinction_coefficient = extinction_coefficient
 
     @staticmethod
     def inverseGamma(x, gamma = 2.2):

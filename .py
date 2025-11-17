@@ -36,3 +36,8 @@ class Pyforge:
 
             self.intensity_table[len(self.available_filaments)][i] = (1 - R) * np.exp(- self.available_filaments[i].extinction_coefficient * self.thickness)
 
+    def ExpectedIntensity(self, fila_list : list[int], backlight, frontlight):
+        # list of indice
+        # backlight and frontlight are ndarray of light intensity
+
+        
