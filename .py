@@ -49,7 +49,10 @@ class Pyforge:
     AIR.refractive_index = np.array(1, 1, 1)
     # considered as no intensity diminishing
 
-    def __init__(self, available_filaments, thickness, picture):
+    def __init__(self, available_filaments, thickness, picture, max_layer = 40, gpu = 'mps'):
+        
+        self.gpu = gpu
+        self.max_layer = max_layer
 
         self.all_fila = available_filaments + [Pyforge.AIR]
         self.thickness = thickness
@@ -70,6 +73,11 @@ class Pyforge:
 
                 self.R[i][j] = reflectance * Filament.LambertEffct(self.all_fila[i], self.thickness)
                 # the light passes through fila i
+        
+        # running related
+        self.t_matrix = torch.zeros((self.max_layer, self.max_layer))
+        self.matrix = self.t_matrix.to(self.gpu)
+        
 
 '''
 MARK : WHEN SOLVING THE SIMULTANEOUS EQUATIONS
