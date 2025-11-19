@@ -60,26 +60,55 @@ class Pyforge:
 
         self.num_fila = len(self.all_fila)
 
-        self.P = np.zeros((self.num_fila, self.num_fila))
-        self.R = np.zeros((self.num_fila, self.num_fila))
+        self.P = torch.zeros((self.num_fila, self.num_fila, 3))
+        self.R = torch.zeros((self.num_fila, self.num_fila, 3))
         # the meaning has been shown in KEY PRINCIPLE
 
         for i in range(self.num_fila):
             for j in range(self.num_fila):
                 reflectance = Filament.SurfReflct(self.all_fila[i], self.all_fila[j])
 
-                self.P[i][j] = (1 - reflectance) * Filament.LambertEffct(self.all_fila[j], self.thickness)
+                self.P[i][j] = torch.from_numpy( (1 - reflectance) * Filament.LambertEffct(self.all_fila[j], self.thickness))
                 # the light passes through fila j
 
-                self.R[i][j] = reflectance * Filament.LambertEffct(self.all_fila[i], self.thickness)
+                self.R[i][j] = torch.from_numpy( reflectance * Filament.LambertEffct(self.all_fila[i], self.thickness))
                 # the light passes through fila i
         
-        # running related
-        self.t_matrix = torch.zeros((self.max_layer, self.max_layer))
-        self.matrix = self.t_matrix.to(self.gpu)
-        
 
-'''
+    # THINGS NEEDED FOR SOLVING THE SIMULTANEOUS EQUATIONS
+
+        self.outcome = torch.zeros((2 * self.max_layer, 3))
+        # the vector at the right of the simultaneous equations
+
+        self.t_matrix = torch.zeros((2 * self.max_layer, 2 * self.max_layer, 3)) # E_f and E_b
+        self.matrix = self.t_matrix.to(self.gpu)
+        # the matrix of the simultaneous equations
+
+        '''
+        INITIALIZE THE MATRIX: 
+
+        the outside 2 air layers should be put at the first 4 rows / cols
+        '''
+        # E_f0
+        self.matrix[0][0] = torch.tensor([-1, -1, -1])
+
+        # E_b0
+        self.matrix[1][0] = self.R[-1][-1]
+        self.matrix[1][1] = torch.tensor([-1, -1, -1])
+        self.matrix[1][3] = self.P[-1][-1]
+
+        # E_fn
+        self.matrix[2][0] = self.P[-1][-1]
+        self.matrix[2][2] = torch.tensor([-1, -1, -1])
+        self.matrix[2][3] = self.R[-1][-1]
+
+        # E_bn
+        self.matrix[3][3] = torch.tensor([-1, -1, -1])
+
+        for i in range(self.max_layer * 2):
+            self.matrix[i][i] = torch.tensor([-1, -1, -1])
+
+    '''
 MARK : WHEN SOLVING THE SIMULTANEOUS EQUATIONS
 
 as deleting a row or a col in tensor is a relatively slow operation, 
@@ -98,8 +127,118 @@ the permutation of the rest does not matters
 
 '''
 
+    def _modifyMatrixAdd(self, id, pre_id, nxt_id, fila, pre_fila, nxt_fila):
+        '''
+        the id(s) here are (kind of ?) the index of the matrix
+            (actually E_fi is in (2*id) and E_bi is in (2*id + 1) )
+        the fila(s) here are the index of the filament 
+            (that used for P and R)
+        '''
 
-'''
+        fid = 2 * id
+        bid = 2 * id + 1
+
+        pre_fid = 2 * pre_id
+        pre_bid = 2 * pre_id + 1
+
+        nxt_fid = 2 * nxt_id
+        nxt_bid = 2 * nxt_id + 1
+
+        # E_fi = P[i-1][i] * E_f(i-1) + R[i][i-1] * E_bi
+        # E_bi = P[i+1][i] * E_b(i+1) + R[i][i+1] * E_fi
+
+        self.matrix[pre_bid][nxt_bid] = torch.tensor([0, 0, 0])
+        self.matrix[pre_bid][bid] = self.P[fila][pre_fila]
+
+        self.matrix[nxt_fid][pre_fid] = torch.tensor([0, 0, 0])
+        self.matrix[nxt_fid][fid] = self.P[fila][nxt_fila]
+
+        self.matrix[fid][pre_fid] = self.P[pre_fila][fila]
+        self.matrix[fid][bid] = self.R[pre_fila][fila]
+
+        self.matrix[bid][nxt_bid] = self.P[nxt_fila][fila]
+        self.matrix[bid][fid] = self.R[nxt_fila][fila]
+    
+    def _modifyMatrixRpl(self, id, pre_id, nxt_id, fila, pre_fila, nxt_fila):
+        '''
+        the id(s) here are (kind of ?) the index of the matrix
+            (actually E_fi is in (2*id) and E_bi is in (2*id + 1) )
+        the fila(s) here are the index of the filament 
+            (that used for P and R)
+            (fila here is the index of the new filament)
+        '''
+
+        fid = 2 * id
+        bid = 2 * id + 1
+
+        pre_fid = 2 * pre_id
+        pre_bid = 2 * pre_id + 1
+
+        nxt_fid = 2 * nxt_id
+        nxt_bid = 2 * nxt_id + 1
+
+        # E_fi = P[i-1][i] * E_f(i-1) + R[i][i-1] * E_bi
+        # E_bi = P[i+1][i] * E_b(i+1) + R[i][i+1] * E_fi
+
+        self.matrix[pre_bid][bid] = self.P[fila][pre_fila]
+
+        self.matrix[nxt_fid][fid] = self.P[fila][nxt_fila]
+
+        self.matrix[fid][pre_fid] = self.P[pre_fila][fila]
+        self.matrix[fid][bid] = self.R[pre_fila][fila]
+
+        self.matrix[bid][nxt_bid] = self.P[nxt_fila][fila]
+        self.matrix[bid][fid] = self.R[nxt_fila][fila]
+    
+    def _modifyMatrixRmv(self, id, pre_id, nxt_id, fila, pre_fila, nxt_fila):
+        '''
+        the id(s) here are (kind of ?) the index of the matrix
+            (actually E_fi is in (2*id) and E_bi is in (2*id + 1) )
+        the fila(s) here are the index of the filament 
+            (that used for P and R)
+            (fila here is not used, but i just wanna put it here to keep the params the same)
+        '''
+
+        fid = 2 * id
+        bid = 2 * id + 1
+
+        pre_fid = 2 * pre_id
+        pre_bid = 2 * pre_id + 1
+
+        nxt_fid = 2 * nxt_id
+        nxt_bid = 2 * nxt_id + 1
+
+        # E_fi = P[i-1][i] * E_f(i-1) + R[i][i-1] * E_bi
+        # E_bi = P[i+1][i] * E_b(i+1) + R[i][i+1] * E_fi
+
+        self.matrix[pre_bid][bid] = torch.tensor([0, 0, 0])
+        self.matrix[pre_bid][nxt_bid] = self.P[nxt_fila][pre_fila]
+
+        self.matrix[nxt_fid][fid] = torch.tensor([0, 0, 0])
+        self.matrix[nxt_fid][pre_fid] = self.P[pre_fila][nxt_fila]
+
+        self.matrix[fid][pre_fid] = torch.tensor([0, 0, 0])
+        self.matrix[fid][bid] = torch.tensor([0, 0, 0])
+
+        self.matrix[bid][nxt_bid] = torch.tensor([0, 0, 0])
+        self.matrix[bid][fid] = torch.tensor([0, 0, 0])
+
+    def _solveEquation(self, lft_input, rht_input):
+
+        self.outcome[0] = lft_input # E_f0
+        self.outcome[3] = rht_input # E_b0
+
+        transposed_outcome = self.outcome.permute(1, 0)
+        transposed_matrix = self.matrix.permute(2, 0, 1)
+
+        self.res = torch.linalg.solve(transposed_matrix, transposed_outcome)
+        self.res = self.res.permute(1, 0)
+
+        return self.res[1], self.res[2]
+        #      E_b0       , E_fn
+        #      lft_output , rht_output
+
+    '''
 
 OTHER NOTES
 
