@@ -5,39 +5,99 @@ import torch
 
 from filament import Filament
 
+'''
+MARK: KEY PRINCIPLE
+
+            |             |             |                |             |
+       E_f0 |        E_f1 |        E_f2 |                |    E_f(n-1) |        E_fn
+----------> | ----------> | ----------> | ----......---> | ----------> | ---------->
+            |             |             |                |             |
+<---------- | <---------- | <---------- | <---......---- | <---------- | <----------
+E_b0        | E_b1        | E_b2        |                | E_b(n-1)    | E_bn
+            |             |             |                |             |
+
+            
+E : the expectation of the number of passing for one photon
+
+E_f0, E_bn given
+E_b0, E_fn needed (exactly the same as the ratio of the intensity)
+
+
+modelled by Markov chain, we get: 
+
+E_fi = P[i-1][i] * E_f(i-1) + R[i][i-1] * E_bi
+E_bi = P[i+1][i] * E_b(i+1) + R[i][i+1] * E_fi
+
+for each i
+
+
+where: 
+
+r[i][j] = ( (n_i - n_j) / (n_i + n_j) ) ** 2  # reflected ratio at the surface
+P[i][j] = (1 - r[i][j]) * exp(-K[j] * d)
+R[i][j] = r[i][j] * exp(-K[i] * d)
+
+
+get E_b0 and E_fn by solving the simultaneous equations
+
+'''
+
 class Pyforge:
+
+    AIR = Filament("Nature", 'Air')
+    AIR.extinction_coefficient = np.array(0, 0, 0)
+    AIR.refractive_index = np.array(1, 1, 1)
+    # considered as no intensity diminishing
 
     def __init__(self, available_filaments, thickness, picture):
 
-        self.available_filaments = available_filaments
+        self.all_fila = available_filaments + [Pyforge.AIR]
         self.thickness = thickness
         self.picture = picture
 
-        self.intensity_table = np.zeros((len(self.available_filaments)+1, len(self.available_filaments)+1), dtype=float)
-        # intensity_table[i][j] is the multiple of the intensity when light travels from i-th filament to j-th filament
-        # I_right_after_j = intensity_table[i][j] * I_right_after_i
-        # I_right_after_i = intensity_table[j][i] * I_right_after_j
-        # the last filament is always the air
+        self.num_fila = len(self.all_fila)
 
-        for i in range(len(self.available_filaments)):
-            for j in range(len(self.available_filaments)):
-                # exp(-K_j * d) * (1 - R)
-                # R = ( (n1 - n2) / (n1 + n2) ) ^ 2
-                fila1 = self.available_filaments[i]
-                fila2 = self.available_filaments[j]
-                R = ( (fila1.refractive_index - fila2.refractive_index) / (fila1.refractive_index + fila2.refractive_index) ) ** 2
-                self.intensity_table[i][j] = np.exp(- fila2.extinction_coefficient * self.thickness) * (1-R)
-        
-        for i in range(len(self.available_filaments)):
-            n = self.available_filaments[i].refractive_index
-            R = ( (n - 1) / (n + 1) ) ** 2
+        self.P = np.zeros((self.num_fila, self.num_fila))
+        self.R = np.zeros((self.num_fila, self.num_fila))
+        # the meaning has been shown in KEY PRINCIPLE
 
-            self.intensity_table[i][len(self.available_filaments)] = (1 - R)
+        for i in range(self.num_fila):
+            for j in range(self.num_fila):
+                reflectance = Filament.SurfReflct(self.all_fila[i], self.all_fila[j])
 
-            self.intensity_table[len(self.available_filaments)][i] = (1 - R) * np.exp(- self.available_filaments[i].extinction_coefficient * self.thickness)
+                self.P[i][j] = (1 - reflectance) * Filament.LambertEffct(self.all_fila[j], self.thickness)
+                # the light passes through fila j
 
-    def ExpectedIntensity(self, fila_list : list[int], backlight, frontlight):
-        # list of indice
-        # backlight and frontlight are ndarray of light intensity
+                self.R[i][j] = reflectance * Filament.LambertEffct(self.all_fila[i], self.thickness)
+                # the light passes through fila i
 
-        
+'''
+MARK : WHEN SOLVING THE SIMULTANEOUS EQUATIONS
+
+as deleting a row or a col in tensor is a relatively slow operation, 
+use dynamic indexing in the matrix to speed up
+
+use a double-directed linked list to store layers of filaments
+(need to write in C++ as python's list is too slow)
+(use an extra linked list to store empty nodes to save space (? no python library achieves this) )
+
+ensure the first 4 rows / cols are inputs / outputs
+
+just need to modify several items in the matrix / concate noew row and col
+O(1)
+
+the permutation of the rest does not matters
+
+'''
+
+
+'''
+
+OTHER NOTES
+
+- use jit and for statement to speed up the SA loop
+- the distance (kind of loss func) should emphasize the difference in brightness
+- a maximum number of layers should be set as things get crazy near (0, 0, 0)
+    - maybe a minimum as well
+
+'''

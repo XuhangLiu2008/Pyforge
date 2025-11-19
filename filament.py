@@ -5,6 +5,14 @@ import matplotlib.pyplot as plt
 
 class Filament:
 
+    @staticmethod
+    def SurfReflct(a, b): # a : Filament, b : Filament
+        return ( (a.refractive_index - b.refractive_index) / (a.refractive_index + b.refractive_index) ) ** 2
+    
+    @staticmethod
+    def LambertEffct(a, d : float): # a : Filament
+        return np.exp( - a.extinction_coefficient * d)
+
     def __init__(self, brand, name, 
                  refractive_index = np.zeros(3, dtype=float), 
                  extinction_coefficient = np.zeros(3, dtype=float)):
