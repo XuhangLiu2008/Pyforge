@@ -45,18 +45,17 @@ get E_b0 and E_fn by solving the simultaneous equations
 class Pyforge:
 
     AIR = Filament("Nature", 'Air')
-    AIR.extinction_coefficient = np.array(0, 0, 0)
-    AIR.refractive_index = np.array(1, 1, 1)
+    AIR.extinction_coefficient = np.array([0, 0, 0])
+    AIR.refractive_index = np.array([1, 1, 1])
     # considered as no intensity diminishing
 
-    def __init__(self, available_filaments, thickness, picture, max_layer = 40, gpu = 'mps'):
+    def __init__(self, available_filaments, thickness, max_layer = 40, gpu = 'mps'):
         
         self.gpu = gpu
         self.max_layer = max_layer
 
         self.all_fila = available_filaments + [Pyforge.AIR]
         self.thickness = thickness
-        self.picture = picture
 
         self.num_fila = len(self.all_fila)
 
