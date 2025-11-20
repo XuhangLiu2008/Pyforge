@@ -1,7 +1,9 @@
 import numpy as np
 import cv2
 
+
 import torch
+import pcbridge
 
 from filament import Filament
 
@@ -58,6 +60,12 @@ class Pyforge:
         self.thickness = thickness
 
         self.num_fila = len(self.all_fila)
+        
+        # linked list storing the current layer order via C++ extension
+        self.layer_list = pcbridge.DoublyList()
+        # initialize with the two boundary air layers (index = num_fila - 1)
+        self.layer_list.append(self.num_fila - 1)  # left air
+        self.layer_list.append(self.num_fila - 1)  # right air
 
         self.P = torch.zeros((self.num_fila, self.num_fila, 3))
         self.R = torch.zeros((self.num_fila, self.num_fila, 3))
