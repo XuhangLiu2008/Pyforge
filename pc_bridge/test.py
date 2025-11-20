@@ -1,10 +1,16 @@
 import pcbridge
 
-lst = pcbridge.DoublyList(10)
+pcbridge.list1.append(1)
+pcbridge.list1.append(2)
 
-lst.append(20)
-lst.append(30)
-lst.prepend(5)
+pcbridge.list2.append(10)
+pcbridge.list3.prepend(-5)
 
-for value in lst:
-    print(value)
+for v in pcbridge.list1:
+    print("list1:", v)
+
+for v in pcbridge.list2:
+    print("list2:", v)
+
+for v in pcbridge.list3:
+    print("list3:", v)

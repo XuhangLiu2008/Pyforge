@@ -2,7 +2,7 @@
 
 namespace py = pybind11;
 
-struct Node {         // << move this up here
+struct Node {
     int value;
     Node* prev;
     Node* next;
@@ -110,6 +110,11 @@ struct DoublyList {
     }
 };
 
+// Three global DoublyList instances
+static DoublyList list1(0);
+static DoublyList list2(0);
+static DoublyList list3(0);
+
 PYBIND11_MODULE(pcbridge, m) {
     py::class_<Node>(m, "Node")
         .def_readonly("value", &Node::value)
@@ -128,4 +133,9 @@ PYBIND11_MODULE(pcbridge, m) {
         .def("__iter__", [](DoublyList &self) {
             return py::make_iterator(self.begin(), self.end());
         }, py::keep_alive<0, 1>());  // keep list alive while iterating
+
+    // Expose the three global instances to Python
+    m.attr("list1") = &list1;
+    m.attr("list2") = &list2;
+    m.attr("list3") = &list3;
 }
