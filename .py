@@ -255,7 +255,7 @@ the permutation of the rest does not matters
     def rmvFila(self, fila, index):
         pass
 
-    def mdfFila(self, fila, index):
+    def rplFila(self, fila, index):
         pass
 
     def randomDisturbance(self):
@@ -263,8 +263,11 @@ the permutation of the rest does not matters
 
     def getFilaList(self):
         pass
+
+    def setInitialSolution(self, solution):
+        pass
     
-    def simulatedAnnealing(self, pos, loss, epoch):
+    def simulatedAnnealing(self, pos, loss, temp, cooling_rate, max_iter = np.inf(), min_temp = 0, init_solution = None):
         # pos is a list-like object with length 2
         # the position of a pixel in the picture
 
@@ -272,7 +275,27 @@ the permutation of the rest does not matters
         # according to the picture
         # using solveEquation
 
-        pass
+        self.setInitialSolution(init_solution)
+        cur_loss = loss(pos)
+
+        temperature = temp
+        iteration = 0
+
+        while temperature > min_temp and iteration < max_iter:
+            
+            self.randomDisturbance()
+            new_loss = loss(pos)
+
+            delta = new_loss - cur_loss
+
+            if delta < 0 or np.random() < np.exp(delta / temperature):
+
+                cur_loss = new_loss
+
+            iteration += 1
+            temperature *= cooling_rate
+
+        return self.getFilaList()
 
     '''
 
