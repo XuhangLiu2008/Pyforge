@@ -73,6 +73,27 @@ struct DoublyList {
         size++;
     }
 
+    void insert(int index, int v) {
+        if (index < 0) index += (int)size;
+        if (index < 0 || index > (int)size) {
+            throw py::index_error();
+        }
+
+        if (index == 0) {
+            prepend(v);
+        } else if (index == (int)size) {
+            append(v);
+        } else {
+            Node* current = get_node_at(index);
+            Node* n = new Node(v);
+            n->prev = current->prev;
+            n->next = current;
+            current->prev->next = n;
+            current->prev = n;
+            size++;
+        }
+    }
+
     // Remove a specific node. 
     // Note: This is unsafe if the node does not belong to this list or is already deleted.
     void remove_node(Node* node) {
@@ -158,6 +179,7 @@ PYBIND11_MODULE(pcbridge, m) {
         .def(py::init<int>())
         .def("append", &DoublyList::append)
         .def("prepend", &DoublyList::prepend)
+        .def("insert", &DoublyList::insert)
         .def("remove_node", &DoublyList::remove_node)
         .def("remove", &DoublyList::remove_value)
         .def("clear", &DoublyList::clear)
