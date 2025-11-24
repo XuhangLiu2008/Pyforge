@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 
-
 import torch
 import pcbridge
 
@@ -51,6 +50,34 @@ class Pyforge:
     AIR.refractive_index = np.array([1, 1, 1])
     # considered as no intensity diminishing
 
+    def _init_matrix(self):
+        '''
+        INITIALIZE THE MATRIX: 
+
+        the outside 2 air layers should be put at the first 4 rows / cols
+        '''
+
+        self.matrix = torch.zeros((self.max_layer * 2, self.max_layer * 2), dtype = torch.float32, device = self.gpu)
+
+        # E_f0
+        self.matrix[0][0] = torch.tensor([-1, -1, -1])
+
+        # E_b0
+        self.matrix[1][0] = self.R[-1][-1]
+        self.matrix[1][1] = torch.tensor([-1, -1, -1])
+        self.matrix[1][3] = self.P[-1][-1]
+
+        # E_fn
+        self.matrix[2][0] = self.P[-1][-1]
+        self.matrix[2][2] = torch.tensor([-1, -1, -1])
+        self.matrix[2][3] = self.R[-1][-1]
+
+        # E_bn
+        self.matrix[3][3] = torch.tensor([-1, -1, -1])
+
+        for i in range(self.max_layer * 2):
+            self.matrix[i][i] = torch.tensor([-1, -1, -1])
+
     def __init__(self, available_filaments, thickness, max_layer = 40, gpu = 'mps'):
         
         self.gpu = gpu
@@ -87,33 +114,10 @@ class Pyforge:
         self.outcome = torch.zeros((2 * self.max_layer, 3))
         # the vector at the right of the simultaneous equations
 
-        self.t_matrix = torch.zeros((2 * self.max_layer, 2 * self.max_layer, 3)) # E_f and E_b
-        self.matrix = self.t_matrix.to(self.gpu)
+        self.matrix = torch.zeros((self.max_layer * 2, self.max_layer * 2), dtype = torch.float32, device = self.gpu)
         # the matrix of the simultaneous equations
 
-        '''
-        INITIALIZE THE MATRIX: 
-
-        the outside 2 air layers should be put at the first 4 rows / cols
-        '''
-        # E_f0
-        self.matrix[0][0] = torch.tensor([-1, -1, -1])
-
-        # E_b0
-        self.matrix[1][0] = self.R[-1][-1]
-        self.matrix[1][1] = torch.tensor([-1, -1, -1])
-        self.matrix[1][3] = self.P[-1][-1]
-
-        # E_fn
-        self.matrix[2][0] = self.P[-1][-1]
-        self.matrix[2][2] = torch.tensor([-1, -1, -1])
-        self.matrix[2][3] = self.R[-1][-1]
-
-        # E_bn
-        self.matrix[3][3] = torch.tensor([-1, -1, -1])
-
-        for i in range(self.max_layer * 2):
-            self.matrix[i][i] = torch.tensor([-1, -1, -1])
+        self._init_matrix()
 
     '''
 MARK : WHEN SOLVING THE SIMULTANEOUS EQUATIONS
@@ -230,7 +234,7 @@ the permutation of the rest does not matters
         self.matrix[bid][nxt_bid] = torch.tensor([0, 0, 0])
         self.matrix[bid][fid] = torch.tensor([0, 0, 0])
 
-    def _solveEquation(self, lft_input, rht_input):
+    def solveEquation(self, lft_input, rht_input):
 
         self.outcome[0] = lft_input # E_f0
         self.outcome[3] = rht_input # E_b0
@@ -244,6 +248,31 @@ the permutation of the rest does not matters
         return self.res[1], self.res[2]
         #      E_b0       , E_fn
         #      lft_output , rht_output
+
+    def addFila(self, fila, index):
+        pass
+
+    def rmvFila(self, fila, index):
+        pass
+
+    def mdfFila(self, fila, index):
+        pass
+
+    def randomDisturbance(self):
+        pass
+
+    def getFilaList(self):
+        pass
+    
+    def simulatedAnnealing(self, pos, loss, epoch):
+        # pos is a list-like object with length 2
+        # the position of a pixel in the picture
+
+        # loss is a function that accept a pos and return a float
+        # according to the picture
+        # using solveEquation
+
+        pass
 
     '''
 

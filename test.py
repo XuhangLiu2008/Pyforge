@@ -7,8 +7,6 @@ pcbridge.list1.append(2)
 pcbridge.list1.prepend(0)
 print(f"List 1: {pcbridge.list1}")
 
-pcbridge.list1.insert(2, 99)
-
 # Length
 print(f"Length of list1: {len(pcbridge.list1)}")
 
