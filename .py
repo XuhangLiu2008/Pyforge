@@ -50,7 +50,7 @@ class Pyforge:
     AIR.refractive_index = np.array([1, 1, 1])
     # considered as no intensity diminishing
 
-    def _init_matrix(self):
+    def _init_matrix_linklist(self):
         '''
         INITIALIZE THE MATRIX: 
 
@@ -60,23 +60,45 @@ class Pyforge:
         self.matrix = torch.zeros((self.max_layer * 2, self.max_layer * 2), dtype = torch.float32, device = self.gpu)
 
         # E_f0
-        self.matrix[0][0] = torch.tensor([-1, -1, -1])
+        # self.matrix[0][0] = torch.tensor([-1, -1, -1])
 
         # E_b0
         self.matrix[1][0] = self.R[-1][-1]
-        self.matrix[1][1] = torch.tensor([-1, -1, -1])
+        # self.matrix[1][1] = torch.tensor([-1, -1, -1])
         self.matrix[1][3] = self.P[-1][-1]
 
         # E_fn
         self.matrix[2][0] = self.P[-1][-1]
-        self.matrix[2][2] = torch.tensor([-1, -1, -1])
+        # self.matrix[2][2] = torch.tensor([-1, -1, -1])
         self.matrix[2][3] = self.R[-1][-1]
 
         # E_bn
-        self.matrix[3][3] = torch.tensor([-1, -1, -1])
+        # self.matrix[3][3] = torch.tensor([-1, -1, -1])
 
         for i in range(self.max_layer * 2):
             self.matrix[i][i] = torch.tensor([-1, -1, -1])
+        
+        self.layer_list.clear()
+        res0 = self.layer_list.append(self.num_fila - 1) # m_index 0
+        res1 = self.layer_list.append(self.num_fila - 1) # m_index 1
+
+        if res0 != [[-1, -1], [0, self.num_fila - 1], [-1, -1]] or res1 != [[0, self.num_fila - 1], [1, self.num_fila - 1], [-1, -1]]:
+            raise Exception("linked list initialization failed")
+            
+    '''
+    
+ABOUT THE LINKED LIST: 
+
+NOTE: l_index is the index used in linked list
+      m_index is the index used in memory
+
+__init__(max_layer): the maximum number of layers, used to ensure the size of matrix
+
+insert / remove / replace (l_index, fila) -> [[pre_m_index, pre_fila], 
+                                              [m_index,     fila    ], 
+                                              [nxt_m_index, nxt_fila]]
+
+'''
 
     def __init__(self, available_filaments, thickness, max_layer = 40, gpu = 'mps'):
         
@@ -89,10 +111,7 @@ class Pyforge:
         self.num_fila = len(self.all_fila)
         
         # linked list storing the current layer order via C++ extension
-        self.layer_list = pcbridge.DoublyList()
-        # initialize with the two boundary air layers (index = num_fila - 1)
-        self.layer_list.append(self.num_fila - 1)  # left air
-        self.layer_list.append(self.num_fila - 1)  # right air
+        self.layer_list = pcbridge.DoublyList(max_layer)
 
         self.P = torch.zeros((self.num_fila, self.num_fila, 3))
         self.R = torch.zeros((self.num_fila, self.num_fila, 3))
@@ -117,7 +136,7 @@ class Pyforge:
         self.matrix = torch.zeros((self.max_layer * 2, self.max_layer * 2), dtype = torch.float32, device = self.gpu)
         # the matrix of the simultaneous equations
 
-        self._init_matrix()
+        self._init_matrix_linklist()
 
     '''
 MARK : WHEN SOLVING THE SIMULTANEOUS EQUATIONS
@@ -249,14 +268,30 @@ the permutation of the rest does not matters
         #      E_b0       , E_fn
         #      lft_output , rht_output
 
+
+    '''
+
+the format of the return value of remove / replace / insert:
+
+[
+[pre_id, pre_fila], 
+[id,     fila], 
+[nxt_id, nxt_fila]
+]
+
+'''
+
     def addFila(self, fila, index):
-        pass
+        res = self.layer_list.insert(index, fila)
+        self._modifyMatrixAdd(res[1][0], res[0][0], res[2][0], res[1][1], res[0][1], res[2][1])
 
     def rmvFila(self, fila, index):
-        pass
+        res = self.layer_list.remove(index, fila)
+        self._modifyMatrixRmv(res[1][0], res[0][0], res[2][0], res[1][1], res[0][1], res[2][1])
 
     def rplFila(self, fila, index):
-        pass
+        res = self.layer_list.replace(index, fila)
+        self._modifyMatrixRpl(res[1][0], res[0][0], res[2][0], res[1][1], res[0][1], res[2][1])
 
     def randomDisturbance(self):
         pass
