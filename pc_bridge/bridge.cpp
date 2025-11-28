@@ -2,6 +2,7 @@
 #include <string>
 #include <sstream>
 #include <stdexcept>
+#include <cstdint>
 
 namespace py = pybind11;
 
@@ -121,6 +122,16 @@ struct DoublyList {
         throw std::invalid_argument("DoublyList.remove(x): x not in list");
     }
 
+    // Deep
+    uintptr_t get_memory_address() const {
+        return reinterpret_cast<uintptr_t>(head);
+    }
+
+    uintptr_t get_node_memory_address(int index) const {
+        Node* node = get_node_at(index);
+        return reinterpret_cast<uintptr_t>(node);
+    }
+
     int sum_forward() const {
         int s = 0;
         Node* cur = head;
@@ -185,6 +196,8 @@ PYBIND11_MODULE(pcbridge, m) {
         .def("clear", &DoublyList::clear)
         .def("sum_forward", &DoublyList::sum_forward)
         .def("sum_backward", &DoublyList::sum_backward)
+        .def("get_memory_address", &DoublyList::get_memory_address)
+        .def("get_node_memory_address", &DoublyList::get_node_memory_address)
         .def_readonly("head", &DoublyList::head)
         .def_readonly("tail", &DoublyList::tail)
         .def_readonly("size", &DoublyList::size)

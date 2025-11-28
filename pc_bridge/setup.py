@@ -4,7 +4,7 @@ from pybind11.setup_helpers import Pybind11Extension, build_ext
 ext_modules = [
     Pybind11Extension(
         "pcbridge",          # Python module name
-        ["test.cpp"],        # C++ source file
+        ["bridge.cpp"],        # C++ source file
         cxx_std=17,
     )
 ]

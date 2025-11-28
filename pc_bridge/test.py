@@ -28,6 +28,10 @@ print("Iterating list1:")
 for v in pcbridge.list1:
     print(v)
 
+for counter in range(0, 3):
+    temp_addr = pcbridge.list1.get_node_memory_address(counter)
+    print(temp_addr)
+
 print("\n--- List 2 & 3 ---")
 pcbridge.list2.append(10)
 pcbridge.list3.prepend(-5)

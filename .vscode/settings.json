@@ -1,3 +1,14 @@
 {
-    "cmake.sourceDirectory": "/Users/thomasb/Library/Mobile Documents/com~apple~CloudDocs/Documents/develop/Pyforge/filament_sample"
+    "cmake.sourceDirectory": "/Users/thomasb/Library/Mobile Documents/com~apple~CloudDocs/Documents/develop/Pyforge/filament_sample",
+    "files.associations": {
+        "__bit_reference": "cpp",
+        "__node_handle": "cpp",
+        "bitset": "cpp",
+        "deque": "cpp",
+        "limits": "cpp",
+        "optional": "cpp",
+        "ratio": "cpp",
+        "vector": "cpp",
+        "regex": "cpp"
+    }
 }
