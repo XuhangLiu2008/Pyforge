@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     "/Users/xuhangliu/文件/编程/Pyforge/C_version/a.out"
+relocations:     []
+...

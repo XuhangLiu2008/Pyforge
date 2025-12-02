@@ -1,0 +1,3 @@
+/Users/xuhangliu/文件/编程/Pyforge/C_version/build/CMakeFiles/a.out.dir
+/Users/xuhangliu/文件/编程/Pyforge/C_version/build/CMakeFiles/edit_cache.dir
+/Users/xuhangliu/文件/编程/Pyforge/C_version/build/CMakeFiles/rebuild_cache.dir

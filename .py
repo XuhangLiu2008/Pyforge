@@ -300,7 +300,9 @@ the format of the return value of remove / replace / insert:
         pass
 
     def setInitialSolution(self, solution):
-        pass
+        if solution == None: return
+        for pos in range(len(solution)):
+            self.addFila(solution[pos], pos+1)
     
     def simulatedAnnealing(self, pos, loss, temp, cooling_rate, max_iter = np.inf(), min_temp = 0, init_solution = None):
         # pos is a list-like object with length 2
@@ -309,6 +311,9 @@ the format of the return value of remove / replace / insert:
         # loss is a function that accept a pos and return a float
         # according to the picture
         # using solveEquation
+
+        if max_iter == np.inf() and min_temp == 0:
+            raise ValueError("at least one of the two parameters for max_iter and min_temp must be given")
 
         self.setInitialSolution(init_solution)
         cur_loss = loss(pos)
@@ -342,3 +347,5 @@ OTHER NOTES
     - maybe a minimum as well
 
 '''
+
+    
