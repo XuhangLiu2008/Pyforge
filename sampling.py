@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.mixture import GaussianMixture
 
-image_path = "filament02.png"
+image_path = "Orange_Jan152026.png"
 
 def sampling(image_path):
 
