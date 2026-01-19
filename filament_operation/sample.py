@@ -97,20 +97,28 @@ def sample(image_path: str, new_order: bool = False) -> List[Tuple[float, list]]
     # DEBUG ONLY
     # This part is not working
     if new_order:
+        pprint.pprint(filament_n)
         for i in range(0, 4):
             for j in range(0, 4):
-                index = i * 4 + (3 - j)
+                if i == 1 or i == 2:
+                    index = i * 4 + j
+                else:
+                    index = i * 4 + (3 - j)
                 filament.append(filament_n[index])
-        for i in range(1, 5):
-            for j in range(1, 5):
-                index = (i - 1) * 4 + (j - 1)
-                filament[index][0] = round((i - 1) * 4 + j) / 10
-                pprint.pprint(filament[index])
+        for i in range(0, 4):
+            for j in range(0, 4):
+                index = i * 4 + j
+                filament[index][0] = round(i * 4 + j + 1) / 10
+                # pprint.pprint(filament[index])
     else:
         filament = filament_n
 
     # Optional: debug prints
     # print(f"KMeans was used {KMean_counter} times.")
-    # print(filament)
+    pprint.pp(filament)
 
     return filament
+
+if __name__ == "__main__":
+    filament_sample_result = sample("./filament_sample/filament03.png", new_order = True)
+    pprint.pprint(filament_sample_result)
